@@ -1,6 +1,6 @@
-export type Confidence = 'sure' | 'unsure' | 'guessed' | null;
-export type KeyStatus = 'unverified' | 'verified' | 'disputed';
-export type AttemptStatus = 'correct' | 'wrong' | 'skipped';
+export type Confidence = "sure" | "unsure" | "guessed" | null;
+export type KeyStatus = "unverified" | "verified" | "disputed";
+export type AttemptStatus = "correct" | "wrong" | "skipped";
 
 export interface QuestionLite {
   id: number;
@@ -18,7 +18,7 @@ export interface MockAttempt {
   confidence: Confidence; // null = not flagged
 }
 
-export type CardKind = 'wrong' | 'shaky';
+export type CardKind = "wrong" | "shaky";
 
 export interface Card {
   id: number;
@@ -27,7 +27,7 @@ export interface Card {
   kind: CardKind;
   stage: number; // 0..3
   dueAt: Date;
-  state: 'active' | 'fixed';
+  state: "active" | "fixed";
   lastReviewedAt: Date | null;
   missedCount: number;
 }

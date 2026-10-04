@@ -1,4 +1,4 @@
-import type { Card } from './types';
+import type { Card } from "./types";
 
 const DAY_MS = 86_400_000;
 
@@ -13,11 +13,14 @@ export interface SelectionOptions {
  */
 export function cardScore(card: Card, normPriority: number, now: Date): number {
   const reviewed = card.lastReviewedAt !== null;
-  const daysOverdue = Math.max(0, Math.floor((now.getTime() - card.dueAt.getTime()) / DAY_MS));
+  const daysOverdue = Math.max(
+    0,
+    Math.floor((now.getTime() - card.dueAt.getTime()) / DAY_MS),
+  );
   let s = 0;
   if (reviewed) s += 10 + Math.min(daysOverdue, 5);
-  else if (card.kind === 'wrong') s += 5;
-  if (card.kind === 'shaky') s += 2.5;
+  else if (card.kind === "wrong") s += 5;
+  if (card.kind === "shaky") s += 2.5;
   s += 3 * normPriority;
   if (card.missedCount >= 2) s += 4;
   return s;
@@ -44,8 +47,11 @@ export function pickSession(
   const n = opts.n ?? 10;
   const cap = opts.cap ?? 3;
   const eligible = cards
-    .filter((c) => c.state === 'active' && c.dueAt.getTime() <= now.getTime())
-    .map((c) => ({ c, score: cardScore(c, normPriority.get(c.subtopic) ?? 0, now) }))
+    .filter((c) => c.state === "active" && c.dueAt.getTime() <= now.getTime())
+    .map((c) => ({
+      c,
+      score: cardScore(c, normPriority.get(c.subtopic) ?? 0, now),
+    }))
     .sort((a, b) => b.score - a.score)
     .map((x) => x.c);
 

@@ -1,8 +1,11 @@
-import type { AttemptStatus, MockAttempt, QuestionLite } from './types';
+import type { AttemptStatus, MockAttempt, QuestionLite } from "./types";
 
-export function attemptStatus(selectedIdx: number | null, correctIdx: number): AttemptStatus {
-  if (selectedIdx === null) return 'skipped';
-  return selectedIdx === correctIdx ? 'correct' : 'wrong';
+export function attemptStatus(
+  selectedIdx: number | null,
+  correctIdx: number,
+): AttemptStatus {
+  if (selectedIdx === null) return "skipped";
+  return selectedIdx === correctIdx ? "correct" : "wrong";
 }
 
 export interface TestScore {
@@ -18,17 +21,25 @@ export interface TestScore {
   disputed: number;
 }
 
-export function scoreTest(attempts: MockAttempt[], questions: Map<number, QuestionLite>): TestScore {
-  let correct = 0, wrong = 0, skipped = 0, shakyCorrect = 0, disputed = 0;
+export function scoreTest(
+  attempts: MockAttempt[],
+  questions: Map<number, QuestionLite>,
+): TestScore {
+  let correct = 0,
+    wrong = 0,
+    skipped = 0,
+    shakyCorrect = 0,
+    disputed = 0;
   for (const a of attempts) {
     const q = questions.get(a.questionId);
     if (!q) continue;
-    if (q.keyStatus === 'disputed') disputed++;
+    if (q.keyStatus === "disputed") disputed++;
     const s = attemptStatus(a.selectedIdx, q.correctIdx);
-    if (s === 'correct') {
+    if (s === "correct") {
       correct++;
-      if (a.confidence === 'guessed' || a.confidence === 'unsure') shakyCorrect++;
-    } else if (s === 'wrong') wrong++;
+      if (a.confidence === "guessed" || a.confidence === "unsure")
+        shakyCorrect++;
+    } else if (s === "wrong") wrong++;
     else skipped++;
   }
   const total = attempts.length;
