@@ -1,0 +1,31 @@
+{
+  "name": "mistakeloop-core",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Deterministic core engine for MistakeLoop",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "mistakeloop",
+    "backend",
+    "postgresql",
+    "drizzle",
+    "typescript"
+  ],
+  "author": "Tejas",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.11",
+    "drizzle-orm": "^0.45.3",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  },
+  "dependencies": {
+    "pg": "^8.23.1"
+  }
+}
