@@ -152,3 +152,54 @@ describe('scheduler + progress', () => {
     expect(subtopicProgress([c({ state: 'fixed', stage: 3, lastReviewedAt: NOW })])).toBe('fixed');
   });
 });
+
+
+it("selects due high-priority cards and excludes future cards", () => {
+  const now = new Date("2026-10-04T12:00:00Z");
+
+  const cards: Card[] = [
+    {
+      id: 1,
+      questionId: 1,
+      subtopic: "maths.average",
+      kind: "wrong",
+      stage: 0,
+      dueAt: now,
+      state: "active",
+      lastReviewedAt: null,
+      missedCount: 1,
+    },
+    {
+      id: 2,
+      questionId: 2,
+      subtopic: "indian_constitution",
+      kind: "wrong",
+      stage: 0,
+      dueAt: now,
+      state: "active",
+      lastReviewedAt: null,
+      missedCount: 1,
+    },
+    {
+      id: 3,
+      questionId: 3,
+      subtopic: "maths.percentage",
+      kind: "wrong",
+      stage: 0,
+      dueAt: new Date("2026-10-05T12:00:00Z"),
+      state: "active",
+      lastReviewedAt: null,
+      missedCount: 1,
+    },
+  ];
+
+  const priorities = new Map([
+    ["maths.average", 0.2],
+    ["indian_constitution", 1],
+    ["maths.percentage", 0.9],
+  ]);
+
+  const result = pickSession(cards, priorities, now, { n: 2 });
+
+  expect(result.map((card) => card.id)).toEqual([2, 1]);
+});
