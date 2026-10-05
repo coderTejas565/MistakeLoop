@@ -3,12 +3,7 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
@@ -29,14 +24,24 @@ type AnswerState = {
   submitted: boolean;
 };
 
+type SubmissionResult = {
+  correct: boolean;
+  correctIdx: number;
+};
+
 export default function Home() {
   const [cards, setCards] = useState<RevisionCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+
   const [answer, setAnswer] = useState<AnswerState>({
     selectedIdx: null,
     submitted: false,
   });
+
+  const [result, setResult] = useState<SubmissionResult | null>(null);
+
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -49,8 +54,10 @@ export default function Home() {
         }
 
         const data = await response.json();
+
         setCards(data.cards);
-      } catch {
+      } catch (error) {
+        console.error(error);
         setError("Could not load today's revision.");
       } finally {
         setLoading(false);
@@ -63,9 +70,7 @@ export default function Home() {
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center p-6">
-        <p className="text-muted-foreground">
-          Loading today's revision...
-        </p>
+        <p className="text-muted-foreground">Loading today's revision...</p>
       </main>
     );
   }
@@ -92,8 +97,8 @@ export default function Home() {
 
           <CardContent>
             <p className="text-muted-foreground">
-              You are caught up. Come back when new mistakes are ready
-              for revision.
+              You are caught up. Come back when new mistakes are ready for
+              revision.
             </p>
           </CardContent>
         </Card>
@@ -103,38 +108,48 @@ export default function Home() {
 
   const currentCard = cards[currentIndex];
 
-  const correctIdx =
-    currentCard.questionId === 3
-      ? 0
-      : currentCard.questionId === 5
-        ? 1
-        : currentCard.questionId === 6
-          ? 2
-          : currentCard.questionId === 11
-            ? 1
-            : currentCard.questionId === 17
-              ? 1
-              : currentCard.questionId === 18
-                ? 0
-                : currentCard.questionId === 19
-                  ? 1
-                  : currentCard.questionId === 20
-                    ? 3
-                    : currentCard.questionId === 28
-                      ? 0
-                      : 2;
-
-  const isCorrect = answer.selectedIdx === correctIdx;
-
-  function submitAnswer() {
-    if (answer.selectedIdx === null) {
+  async function submitAnswer() {
+    if (answer.selectedIdx === null || submitting) {
       return;
     }
 
-    setAnswer((previous) => ({
-      ...previous,
-      submitted: true,
-    }));
+    try {
+      setSubmitting(true);
+      setError(null);
+
+      const response = await fetch("/api/revision/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          cardId: currentCard.cardId,
+          questionId: currentCard.questionId,
+          selectedIdx: answer.selectedIdx,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to submit answer");
+      }
+
+      const data: SubmissionResult = await response.json();
+
+      setResult({
+        correct: data.correct,
+        correctIdx: data.correctIdx,
+      });
+
+      setAnswer((previous) => ({
+        ...previous,
+        submitted: true,
+      }));
+    } catch (error) {
+      console.error(error);
+      setError("Could not submit your answer. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function nextQuestion() {
@@ -148,6 +163,9 @@ export default function Home() {
       selectedIdx: null,
       submitted: false,
     });
+
+    setResult(null);
+    setError(null);
   }
 
   const progress =
@@ -165,7 +183,7 @@ export default function Home() {
               </h1>
 
               <p className="text-sm text-muted-foreground">
-                Today's Revision
+                Today&apos;s Revision
               </p>
             </div>
 
@@ -180,19 +198,15 @@ export default function Home() {
         {/* Question */}
         <Card className="flex-1">
           <CardHeader className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">
-                {currentCard.subject}
-              </Badge>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline">{currentCard.subject}</Badge>
 
               <Badge variant="secondary">
                 {currentCard.subtopic.replaceAll("_", " ")}
               </Badge>
 
               {currentCard.kind === "wrong" && (
-                <Badge variant="destructive">
-                  Previous mistake
-                </Badge>
+                <Badge variant="destructive">Previous mistake</Badge>
               )}
             </div>
 
@@ -202,6 +216,7 @@ export default function Home() {
           </CardHeader>
 
           <CardContent className="space-y-6">
+            {/* Options */}
             <RadioGroup
               value={
                 answer.selectedIdx === null
@@ -222,16 +237,22 @@ export default function Home() {
             >
               {currentCard.options.map((option, index) => {
                 const selected = answer.selectedIdx === index;
-                const correct = answer.submitted && index === correctIdx;
+
+                const correct =
+                  answer.submitted &&
+                  result !== null &&
+                  index === result.correctIdx;
+
                 const wrong =
                   answer.submitted &&
+                  result !== null &&
                   selected &&
-                  index !== correctIdx;
+                  index !== result.correctIdx;
 
                 return (
                   <label
                     key={index}
-                    className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition ${
+                    className={`flex items-center gap-3 rounded-lg border p-4 transition ${
                       correct
                         ? "border-green-500 bg-green-50"
                         : wrong
@@ -240,9 +261,7 @@ export default function Home() {
                             ? "border-primary bg-primary/5"
                             : "hover:bg-muted/50"
                     } ${
-                      answer.submitted
-                        ? "cursor-default"
-                        : "cursor-pointer"
+                      answer.submitted ? "cursor-default" : "cursor-pointer"
                     }`}
                   >
                     <RadioGroupItem
@@ -271,23 +290,23 @@ export default function Home() {
             </RadioGroup>
 
             {/* Result */}
-            {answer.submitted && (
+            {answer.submitted && result && (
               <div
                 className={`rounded-lg border p-4 ${
-                  isCorrect
+                  result.correct
                     ? "border-green-500 bg-green-50"
                     : "border-destructive bg-destructive/5"
                 }`}
               >
                 <p className="font-semibold">
-                  {isCorrect ? "Correct!" : "Incorrect"}
+                  {result.correct ? "Correct!" : "Incorrect"}
                 </p>
 
-                {!isCorrect && (
+                {!result.correct && (
                   <p className="mt-1 text-sm text-muted-foreground">
                     Correct answer:{" "}
                     <span className="font-medium text-foreground">
-                      {currentCard.options[correctIdx]}
+                      {currentCard.options[result.correctIdx]}
                     </span>
                   </p>
                 )}
@@ -299,10 +318,10 @@ export default function Home() {
               {!answer.submitted ? (
                 <Button
                   size="lg"
-                  disabled={answer.selectedIdx === null}
+                  disabled={answer.selectedIdx === null || submitting}
                   onClick={submitAnswer}
                 >
-                  Submit Answer
+                  {submitting ? "Submitting..." : "Submit Answer"}
                 </Button>
               ) : currentIndex < cards.length - 1 ? (
                 <Button size="lg" onClick={nextQuestion}>
