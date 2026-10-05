@@ -7,12 +7,18 @@ export async function getDueReviewCards(now: Date) {
     .select({
       id: reviewCards.id,
       questionId: reviewCards.questionId,
+
+      text: questions.text,
+      options: questions.options,
+      subject: questions.subject,
       subtopic: questions.subtopic,
+
       kind: reviewCards.kind,
       stage: reviewCards.stage,
       dueAt: reviewCards.dueAt,
       state: reviewCards.state,
       lastReviewedAt: reviewCards.lastReviewedAt,
+
       missedCount: sql<number>`
         count(*) filter (
           where ${attempts.selectedIdx} is not null
@@ -23,15 +29,13 @@ export async function getDueReviewCards(now: Date) {
     .from(reviewCards)
     .innerJoin(questions, eq(reviewCards.questionId, questions.id))
     .leftJoin(attempts, eq(attempts.questionId, questions.id))
-    .where(
-      and(
-        eq(reviewCards.state, "active"),
-        lte(reviewCards.dueAt, now),
-      ),
-    )
+    .where(and(eq(reviewCards.state, "active"), lte(reviewCards.dueAt, now)))
     .groupBy(
       reviewCards.id,
       reviewCards.questionId,
+      questions.text,
+      questions.options,
+      questions.subject,
       questions.subtopic,
       reviewCards.kind,
       reviewCards.stage,
