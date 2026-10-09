@@ -27,6 +27,7 @@ type AnswerState = {
 type SubmissionResult = {
   correct: boolean;
   correctIdx: number;
+  explanation: string | null;
 };
 
 export default function Home() {
@@ -138,6 +139,7 @@ export default function Home() {
       setResult({
         correct: data.correct,
         correctIdx: data.correctIdx,
+        explanation: data.explanation ?? null,
       });
 
       setAnswer((previous) => ({
@@ -175,6 +177,7 @@ export default function Home() {
     <main className="min-h-screen bg-muted/30">
       <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-4 py-8 sm:px-6">
         {/* Header */}
+
         <header className="mb-8">
           <div className="mb-6 flex items-center justify-between">
             <div>
@@ -196,6 +199,7 @@ export default function Home() {
         </header>
 
         {/* Question */}
+
         <Card className="flex-1">
           <CardHeader className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -217,6 +221,7 @@ export default function Home() {
 
           <CardContent className="space-y-6">
             {/* Options */}
+
             <RadioGroup
               value={
                 answer.selectedIdx === null
@@ -290,30 +295,50 @@ export default function Home() {
             </RadioGroup>
 
             {/* Result */}
-            {answer.submitted && result && (
-              <div
-                className={`rounded-lg border p-4 ${
-                  result.correct
-                    ? "border-green-500 bg-green-50"
-                    : "border-destructive bg-destructive/5"
-                }`}
-              >
-                <p className="font-semibold">
-                  {result.correct ? "Correct!" : "Incorrect"}
-                </p>
 
-                {!result.correct && (
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Correct answer:{" "}
-                    <span className="font-medium text-foreground">
-                      {currentCard.options[result.correctIdx]}
-                    </span>
+            {answer.submitted && result && (
+              <div className="space-y-4">
+                <div
+                  className={`rounded-lg border p-4 ${
+                    result.correct
+                      ? "border-green-500 bg-green-50"
+                      : "border-destructive bg-destructive/5"
+                  }`}
+                >
+                  <p className="font-semibold">
+                    {result.correct ? "Correct!" : "Incorrect"}
                   </p>
+
+                  {!result.correct && (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Correct answer:{" "}
+                      <span className="font-medium text-foreground">
+                        {currentCard.options[result.correctIdx]}
+                      </span>
+                    </p>
+                  )}
+                </div>
+
+                {/* AI Explanation */}
+
+                {!result.correct && result.explanation && (
+                  <div className="rounded-lg border p-4">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold">Why you got it wrong</h3>
+
+                      <Badge variant="secondary">AI explanation</Badge>
+                    </div>
+
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                      {result.explanation}
+                    </p>
+                  </div>
                 )}
               </div>
             )}
 
             {/* Action */}
+
             <div className="flex justify-end">
               {!answer.submitted ? (
                 <Button
@@ -337,6 +362,7 @@ export default function Home() {
         </Card>
 
         {/* Footer */}
+
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Focus on your mistakes. Not more material.
         </p>

@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "../db/client";
 import { attempts, questions, reviewCards } from "../db/schema";
 import { attemptStatus } from "../../domain/scoring";
+import { GeminiProvider } from "../ai/gemini-provider";
 
 interface SubmitRevisionInput {
   cardId: number;
@@ -11,11 +12,9 @@ interface SubmitRevisionInput {
 
 const DAY_MS = 86_400_000;
 
-function getNextSchedule(
-  currentStage: number,
-  correct: boolean,
-  now: Date,
-) {
+const aiProvider = new GeminiProvider();
+
+function getNextSchedule(currentStage: number, correct: boolean, now: Date) {
   if (!correct) {
     return {
       stage: 0,
@@ -55,15 +54,15 @@ function getNextSchedule(
   };
 }
 
-export async function submitRevisionAnswer(
-  input: SubmitRevisionInput,
-) {
+export async function submitRevisionAnswer(input: SubmitRevisionInput) {
   const now = new Date();
 
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const [question] = await tx
       .select({
         id: questions.id,
+        text: questions.text,
+        options: questions.options,
         correctIdx: questions.correctIdx,
       })
       .from(questions)
@@ -97,10 +96,7 @@ export async function submitRevisionAnswer(
       throw new Error("Review card is already fixed");
     }
 
-    const status = attemptStatus(
-      input.selectedIdx,
-      question.correctIdx,
-    );
+    const status = attemptStatus(input.selectedIdx, question.correctIdx);
 
     if (status === "skipped") {
       throw new Error("An answer must be selected");
@@ -114,11 +110,7 @@ export async function submitRevisionAnswer(
       selectedIdx: input.selectedIdx,
     });
 
-    const schedule = getNextSchedule(
-      card.stage,
-      correct,
-      now,
-    );
+    const schedule = getNextSchedule(card.stage, correct, now);
 
     await tx
       .update(reviewCards)
@@ -133,6 +125,8 @@ export async function submitRevisionAnswer(
     return {
       cardId: card.id,
       questionId: question.id,
+      questionText: question.text,
+      options: question.options,
       selectedIdx: input.selectedIdx,
       correctIdx: question.correctIdx,
       correct,
@@ -141,4 +135,31 @@ export async function submitRevisionAnswer(
       state: schedule.state,
     };
   });
+
+  let explanation: string | null = null;
+
+  if (!result.correct) {
+    try {
+      explanation = await aiProvider.explainMistake({
+        question: result.questionText,
+        options: result.options,
+        correctAnswer: result.options[result.correctIdx],
+        userAnswer: result.options[result.selectedIdx],
+      });
+    } catch (error) {
+      console.error("Failed to generate AI mistake explanation:", error);
+    }
+  }
+
+  return {
+    cardId: result.cardId,
+    questionId: result.questionId,
+    selectedIdx: result.selectedIdx,
+    correctIdx: result.correctIdx,
+    correct: result.correct,
+    stage: result.stage,
+    dueAt: result.dueAt,
+    state: result.state,
+    explanation,
+  };
 }
